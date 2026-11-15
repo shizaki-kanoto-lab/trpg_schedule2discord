@@ -1,5 +1,7 @@
 # TRPG予定をDiscordに投稿するツール
 
+![TRPG予定をDiscordに投稿するツール](docs/ogp.png)
+
 Google カレンダーに入れている TRPG セッションの予定を、月ごとにまとめて Discord に自動で投稿する Google Apps Script です。
 毎月1回、今月から6か月分の予定を投稿します。
 
