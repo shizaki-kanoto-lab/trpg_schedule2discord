@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TRPG予定をDiscordに投稿するツール</title>
+  <meta name="description" content="Googleカレンダーに入れたTRPGセッションの予定を、月ごとにまとめてDiscordに自動で投稿する無料ツールです。">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="TRPG予定をDiscordに投稿するツール">
+  <meta property="og:description" content="Googleカレンダーのセッション予定を、毎月まとめてDiscordに自動投稿。無料・コードを書かずに使えます。">
+  <meta property="og:url" content="https://shizaki-kanoto-lab.github.io/trpg_schedule2discord/">
+  <meta name="twitter:card" content="summary">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎲</text></svg>">
+  <style>
+    :root {
+      --bg: #f6f8f7;
+      --surface: #ffffff;
+      --text: #14211f;
+      --muted: #4f6360;
+      --border: #dde6e4;
+      --primary: #0b7a6f;   /* ボタン・リンク（白文字が読める濃さのティール） */
+      --primary-text: #ffffff;
+      --teal: #0f9d8f;      /* 線や飾り */
+      --accent: #f2994a;    /* 線や飾り */
+      --accent-ink: #c9651a; /* チェックマーク（背景上で見える濃さのオレンジ） */
+      --tip-bg: #fdf0e4;
+      --discord-bg: #313338;
+      --discord-embed: #2b2d31;
+      --discord-text: #dbdee1;
+      --discord-muted: #b5bac1;
+      --discord-link: #00a8fc;
+      --discord-code: #1e1f22;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f1a19;
+        --surface: #172524;
+        --text: #e8f1ef;
+        --muted: #a9bdb9;
+        --border: #2a3d3b;
+        --primary: #3cc9b8;
+        --primary-text: #0f1a19;
+        --teal: #3cc9b8;
+        --accent: #f5a962;
+        --accent-ink: #f5a962;
+        --tip-bg: #2a2219;
+      }
+    }
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", "Yu Gothic UI", sans-serif;
+      line-height: 1.8;
+    }
+    a { color: var(--primary); }
+    code { font-size: .92em; padding: 1px 6px; border-radius: 6px; background: var(--tip-bg); }
+    .wrap { max-width: 880px; margin: 0 auto; padding: 0 16px; }
+
+    header.hero { padding: 56px 0 36px; }
+    .hero-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: center; }
+    .hero h1 { font-size: clamp(1.6rem, 4.5vw, 2.2rem); line-height: 1.35; margin: 0 0 14px; }
+    .hero .lead { font-size: 1.08rem; color: var(--muted); margin: 0; }
+    .buttons { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
+    .btn { display: inline-block; padding: 12px 22px; border-radius: 10px; font-weight: 700; text-decoration: none; border: 2px solid var(--primary); }
+    .btn.primary { background: var(--primary); color: var(--primary-text); }
+    .btn.secondary { color: var(--primary); }
+
+    /* Discord の投稿イメージ */
+    .discord { background: var(--discord-bg); color: var(--discord-text); border-radius: 14px; padding: 16px; font-size: .92rem; line-height: 1.5; }
+    .discord .who { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .discord .avatar { width: 36px; height: 36px; border-radius: 50%; background: #5865f2; display: grid; place-items: center; font-size: 1.1rem; }
+    .discord .name { font-weight: 600; color: #fff; }
+    .discord .bot { font-size: .65rem; background: #5865f2; color: #fff; border-radius: 4px; padding: 1px 5px; margin-left: 4px; vertical-align: 2px; }
+    .embed { background: var(--discord-embed); border-left: 4px solid #5865f2; border-radius: 4px; padding: 10px 14px 12px; }
+    .embed .title { font-weight: 700; color: #fff; margin-bottom: 6px; }
+    .embed .field { margin-top: 10px; }
+    .embed .field-name { font-weight: 600; color: #fff; }
+    .embed .link { color: var(--discord-link); }
+    .embed .code { background: var(--discord-code); border-radius: 4px; padding: 6px 8px; margin-top: 4px; font-family: ui-monospace, Menlo, monospace; font-size: .82rem; color: var(--discord-muted); }
+
+    section { padding: 36px 0; border-top: 1px solid var(--border); }
+    h2 { font-size: 1.45rem; margin: 0 0 18px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; }
+    .card h3 { font-size: 1.05rem; margin: 0 0 6px; }
+    .card p { margin: 0; color: var(--muted); }
+
+    ul.check { list-style: none; padding: 0; margin: 0; }
+    ul.check li { padding-left: 1.6em; position: relative; margin: 6px 0; }
+    ul.check li::before { content: "✓"; position: absolute; left: 0; color: var(--accent-ink); font-weight: 700; }
+
+    ol.setup { margin: 0; padding-left: 1.4em; }
+    ol.setup li { margin: 6px 0; }
+    .tip { background: var(--tip-bg); border-radius: 12px; padding: 14px 18px; margin-top: 18px; }
+
+    /* フッター（https://shizaki-kanoto.is-a.dev/kedamono-cs-copy/ に合わせる） */
+    footer {
+      position: relative; margin-top: 40px; padding: 24px 0 max(32px, env(safe-area-inset-bottom));
+      text-align: center; font-size: .8rem; line-height: 1.8; color: var(--muted);
+    }
+    footer::before {
+      content: ""; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent), var(--teal), var(--accent), transparent);
+      opacity: .7;
+    }
+    footer p { margin: 0 0 8px; }
+    footer .copyright { margin: 28px 0 0; font-size: .75rem; letter-spacing: .05em; }
+    footer .foot-logo { display: inline-block; margin-top: 12px; opacity: .85; transition: opacity .2s; }
+    footer .foot-logo:hover { opacity: 1; }
+    footer .foot-logo img { display: block; width: 48px; height: 48px; }
+
+    @media (max-width: 720px) {
+      .hero-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <h1>TRPG予定を<br>Discordに投稿するツール</h1>
+        <p class="lead">Google カレンダーに入れたセッションの予定を、月ごとにまとめて Discord に自動で投稿します。毎月1回、今月から6か月分をお知らせする無料ツールです。</p>
+        <div class="buttons">
+          <a class="btn primary" href="https://github.com/shizaki-kanoto-lab/trpg_schedule2discord#セットアップ">使い方を見る</a>
+          <a class="btn secondary" href="https://github.com/shizaki-kanoto-lab/trpg_schedule2discord">GitHub で見る</a>
+        </div>
+      </div>
+
+      <div class="discord" role="img" aria-label="Discord に投稿されるメッセージの例">
+        <div class="who">
+          <div class="avatar">🎲</div>
+          <div><span class="name">セッション予定</span><span class="bot">アプリ</span></div>
+        </div>
+        <div class="embed">
+          <div class="title">🎲 セッション予定</div>
+          <div>今後6か月分のTRPG予定をまとめました。</div>
+          <div class="field">
+            <div class="field-name">📅 2026年11月</div>
+            <div>・シナリオA（GM）<br>・シナリオB（PL）</div>
+          </div>
+          <div class="field">
+            <div class="field-name">📅 2026年12月</div>
+            <div>・シナリオC（PL）</div>
+          </div>
+          <div class="field">
+            <div class="field-name">📌 空き日程の確認はこちら</div>
+            <div class="link">https://example.com/</div>
+            <div class="code">空き枠の公開は当月〜翌月を目安にしています。</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section>
+      <div class="wrap">
+        <h2>できること</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>月ごとにまとめて投稿</h3>
+            <p>カレンダーの予定を月ごとに並べて、Discord に投稿します。</p>
+          </div>
+          <div class="card">
+            <h3>同じシナリオは1件に</h3>
+            <p>同じ月に同じシナリオが何回あっても、まとめて1件で表示します。</p>
+          </div>
+          <div class="card">
+            <h3>GM か PL かを表示</h3>
+            <p>予定の説明に決めた文字があれば「GM」、なければ「PL」と表示します（任意）。</p>
+          </div>
+          <div class="card">
+            <h3>リンクやお知らせを添える</h3>
+            <p>空き日程の表へのリンクなど、毎回載せたい案内を最後に付けられます（任意）。</p>
+          </div>
+          <div class="card">
+            <h3>毎月自動で投稿</h3>
+            <p>一度設定すれば、毎月決まった日時に自動で投稿します。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <h2>必要なもの</h2>
+        <ul class="check">
+          <li>Google アカウント（セッション予定を入れているカレンダー）</li>
+          <li>投稿先の Discord サーバー（Webhook を作れる権限が必要です）</li>
+        </ul>
+        <p>どちらも無料で使えます。コードを書く必要はなく、ファイルの中身を Google Apps Script に貼り付けて設定するだけです。</p>
+        <div class="tip">セッション予定だけを入れたカレンダーを1つ作っておくのがおすすめです。仕事や私用の予定と同じカレンダーを指定すると、それらも投稿されてしまいます。</div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <h2>安全性について</h2>
+        <ul class="check">
+          <li>Discord の Webhook URL やカレンダー ID は、自分の Apps Script の中にだけ保存します。作者を含め、ほかの人には送られません。</li>
+          <li>通信先は、自分で設定した Discord の Webhook だけです。</li>
+          <li>投稿されるのは、予定のタイトルと月だけです。日付・時刻・説明・参加者は投稿しません。</li>
+        </ul>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <h2>はじめかた</h2>
+        <ol class="setup">
+          <li>Google Apps Script で新しいプロジェクトを作り、コードを貼り付ける</li>
+          <li>Discord で投稿先チャンネルの Webhook を作る</li>
+          <li>Google カレンダーの「カレンダー ID」をコピーする</li>
+          <li>スクリプト プロパティに、カレンダー ID と Webhook URL を登録する</li>
+          <li>試しに投稿して、届くことを確かめる</li>
+          <li><code>setupMonthlyTrigger</code> を一度実行して、毎月の自動投稿を登録する</li>
+        </ol>
+        <div class="tip">
+          詳しい手順と設定項目の一覧は <a href="https://github.com/shizaki-kanoto-lab/trpg_schedule2discord#セットアップ">GitHub の README</a> にまとめています。
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <h2>質問・不具合の報告</h2>
+        <p>分かりにくいところや動かないところがあれば、<a href="https://github.com/shizaki-kanoto-lab/trpg_schedule2discord/issues">GitHub の Issue</a> で気軽に教えてください。</p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <p>不具合・要望は、<a href="https://github.com/shizaki-kanoto-lab/trpg_schedule2discord/issues" target="_blank" rel="noopener">Issues</a> か X（<a href="https://x.com/shizaki_kanoto" target="_blank" rel="noopener">@shizaki_kanoto</a>）までどうぞ。</p>
+      <p class="copyright"><small>&copy; 2026 隠れ家クロウラ ・ MIT License</small></p>
+      <a class="foot-logo" href="https://shizaki-kanoto.is-a.dev/" title="他のツールはこちら" aria-label="他のツールはこちら"><img src="https://shizaki-kanoto.is-a.dev/images/logo.png" alt="" width="48" height="48" loading="lazy"></a>
+    </div>
+  </footer>
+</body>
+</html>
