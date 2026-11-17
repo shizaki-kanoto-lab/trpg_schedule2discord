@@ -18,6 +18,9 @@
   <script>
     try { var t = localStorage.getItem('theme'); if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t); } catch (e) {}
   </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg: #f6f8f7;
@@ -164,6 +167,7 @@
       border-bottom: 1px solid var(--border);
     }
     .site-nav .wrap { display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 60px; }
+    .site-nav { font-family: "Outfit", "Noto Sans JP", system-ui, sans-serif; }
     .site-nav .logo { display: flex; align-items: center; gap: 10px; color: var(--text); text-decoration: none; font-weight: 700; letter-spacing: -.01em; white-space: nowrap; }
     .site-nav .logo img { display: block; width: 32px; height: 32px; }
     .site-nav .right { display: flex; align-items: center; gap: 4px; }
